@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using System.Text;
 
 namespace Ackermann
 {
@@ -8,6 +10,8 @@ namespace Ackermann
 	{
 		private static int _m;
 		private static int _n;
+		private static TextWriter _oldOut;
+		private static StreamWriter _newOut;
 		private static bool _runTest;
 
 		static void Main(string[] args)
@@ -26,6 +30,9 @@ namespace Ackermann
 						Console.WriteLine("Ackermann ({0}, {1}) is: {2}", i, j, Ackerman(i, j));
 					}
 				}
+
+				if (_newOut != null)
+					_newOut.Close();
 			}
 
 			Console.Write("Press any key to exit . . .");
@@ -81,7 +88,7 @@ namespace Ackermann
 					return false;
 				}
 			}
-			else if (args.Count == 2)
+			else if (args.Count == 2 || args.Count == 3)
 			{
 				int i;
 				if (!int.TryParse(args[0], out i))
@@ -97,6 +104,21 @@ namespace Ackermann
 					return false;
 				}
 				_n = i;
+
+				if (args.Count == 3)
+				{
+					var path = args[2];
+					if (!File.Exists(path))
+					{
+						Console.WriteLine("\r\nOutput file not found.\r\n");
+						PrintUsage();
+						return false;
+					}
+
+					_oldOut = Console.Out;
+					_newOut = new StreamWriter(path, false, Encoding.UTF8);
+					Console.SetOut(_newOut);
+				}
 			}
 			else
 			{
@@ -110,7 +132,12 @@ namespace Ackermann
 		static void PrintUsage()
 		{
 			Console.WriteLine(
-	"Usage: ack [test |m n]\r\n\r\ntest\tRun BigIntStack tests.\r\nm\tFirst number of Ackermann's function.\r\nn\tSecond number of Ackermann's function.");
+	@"Usage: ack [test |m n [outfile]]
+
+test	Run BigIntStack tests.
+m		First number of Ackermann's function.
+n		Second number of Ackermann's function.
+outfile	Output file name.");
 		}
 
 		static void TestBigIntStack()
