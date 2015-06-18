@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-
+﻿
 namespace Ackermann
 {
 	class LinkedStack<T> : LinkedList<T>
@@ -11,14 +10,13 @@ namespace Ackermann
 
 		public T Pop()
 		{
-			var item = Last;
-			RemoveLast();
-			return item.Value;
+			var item = RemoveLast();
+			return item;
 		}
 
 		public T Peek()
 		{
-			return Last.Value;
+			return IsEmpty ? default(T) : Last.Value;
 		}
 	}
 }

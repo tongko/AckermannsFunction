@@ -1,38 +1,54 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 
 namespace Ackermann
 {
 	class Program
 	{
-		private static int _m;
-		private static int _n;
-		private static TextWriter _oldOut;
-		private static StreamWriter _newOut;
+		private static byte _m;
+		private static byte _n;
 		private static bool _runTest;
+		private static StreamWriter _output;
+		private static bool _computeSingle;
 
 		static void Main(string[] args)
 		{
 			if (!GetArguments(args))
 				return;
 
+			Console.WriteLine("Ackermann's Function Version {0} - Terry Liew (tongko.liew@gmail.com)\r\n",
+				FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion);
+			if (_output != null)
+				_output.WriteLine("Ackermann's Function Version {0} - Terry Liew (tongko.liew@gmail.com)\r\n",
+				FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion);
+
 			if (_runTest)
 				TestBigIntStack();
 			else
 			{
-				for (int i = 0; i < _m; i++)
+				if (_computeSingle)
 				{
-					for (int j = 0; j < _n; j++)
-					{
-						Console.WriteLine("Ackermann ({0}, {1}) is: {2}", i, j, Ackerman(i, j));
-					}
+					var val = string.Format("Ackermann ({0}, {1}) is: {2}", _m - 1, _n - 1, Ackerman(_m - 1, _n - 1));
+					Console.WriteLine(val);
+					if (_output != null)
+						_output.WriteLine(val);
 				}
-
-				if (_newOut != null)
-					_newOut.Close();
+				else
+					for (var i = 0; i < _m; i++)
+					{
+						for (var j = 0; j < _n; j++)
+						{
+							var val = string.Format("Ackermann ({0}, {1}) is: {2}", i, j, Ackerman(i, j));
+							Console.WriteLine(val);
+							if (_output != null)
+								_output.WriteLine(val);
+						}
+					}
 			}
 
 			Console.Write("Press any key to exit . . .");
@@ -67,6 +83,7 @@ namespace Ackermann
 				}
 			}
 
+			stack.Dispose();
 			return n;
 		}
 
@@ -78,52 +95,56 @@ namespace Ackermann
 				return false;
 			}
 
-			if (args.Count == 1)
+			for (var i = 0; i < args.Count; i++)
 			{
-				if (args[0].ToLower().Equals("test"))
-					_runTest = true;
-				else
+				var arg = args[i].ToLower();
+				switch (arg[0])
 				{
-					PrintUsage();
-					return false;
-				}
-			}
-			else if (args.Count == 2 || args.Count == 3)
-			{
-				int i;
-				if (!int.TryParse(args[0], out i))
-				{
-					PrintUsage();
-					return false;
-				}
-				_m = i;
+					case 't':
+						if (!arg.Equals("test"))
+						{
+							PrintUsage();
+							return false;
+						}
+						_runTest = true;
+						break;
+					case 'm':
+						if (!(arg.Length > 2 && arg[1] == '=' && byte.TryParse(arg.Substring(2), out _m)))
+						{
+							PrintUsage();
+							return false;
+						}
+						break;
+					case 'n':
+						if (!(arg.Length > 2 && arg[1] == '=' && byte.TryParse(arg.Substring(2), out _n)))
+						{
+							PrintUsage();
+							return false;
+						}
+						break;
+					case 'o':
+						string temp = arg.Substring(2).Trim(new[] { '"' });
+						var cki = new ConsoleKeyInfo('y', ConsoleKey.Y, false, false, false);
+						if (File.Exists(temp))
+						{
+							do
+							{
+								Console.Write("\r\nOutput file already exists, overwrite ([y]/n)? ");
+								cki = Console.ReadKey();
+								Console.WriteLine();
+							} while (cki.Key != ConsoleKey.Y && cki.Key != ConsoleKey.N);
+						}
 
-				if (!int.TryParse(args[1], out i))
-				{
-					PrintUsage();
-					return false;
-				}
-				_n = i;
-
-				if (args.Count == 3)
-				{
-					var path = args[2];
-					if (!File.Exists(path))
-					{
-						Console.WriteLine("\r\nOutput file not found.\r\n");
+						if (cki.Key == ConsoleKey.Y)
+							_output = new StreamWriter(temp, false, Encoding.UTF8);
+						break;
+					case 's':
+						_computeSingle = true;
+						break;
+					default:
 						PrintUsage();
 						return false;
-					}
-
-					_oldOut = Console.Out;
-					_newOut = new StreamWriter(path, false, Encoding.UTF8);
-					Console.SetOut(_newOut);
 				}
-			}
-			else
-			{
-				PrintUsage();
-				return false;
 			}
 
 			return true;
@@ -132,12 +153,21 @@ namespace Ackermann
 		static void PrintUsage()
 		{
 			Console.WriteLine(
-	@"Usage: ack [test |m n [outfile]]
+@"
+Usage: ack.exe [test] options
 
-test	Run BigIntStack tests.
-m		First number of Ackermann's function.
-n		Second number of Ackermann's function.
-outfile	Output file name.");
+Where:
+	test    Run BigIntStack tests.
+
+	options:
+	m=num   First number of Ackermann's function. This is ignored if [test] is specified.
+	n=num   Second number of Ackermann's function. This is ignored if [test] is specified.
+	s		Single computation, do not loop, compute m and n as is.
+	o=file  Output file name.
+
+Example:
+	ack.exe m=5 n=6 o=""D:\Temp Folder\Result.txt""
+");
 		}
 
 		static void TestBigIntStack()
@@ -149,9 +179,11 @@ outfile	Output file name.");
 				st.Push(l);
 			}
 
-			for (int i = 0; i < 6; i++)
+			for (var i = 0; i < 6; i++)
 			{
 				Console.WriteLine("{0}", st.Pop().ToString());
+				if (_output != null)
+					_output.WriteLine("{0}", st.Pop().ToString());
 			}
 
 			Console.ReadKey(true);

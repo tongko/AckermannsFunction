@@ -4,18 +4,19 @@ using System.Numerics;
 
 namespace Ackermann
 {
-	class BigIntStack
+	class BigIntStack : IDisposable
 	{
+		private readonly string _tempFileName = Path.GetTempFileName();
 		private readonly FileStream _stream;
 		private readonly LinkedStack<long> _index;
 
 		public BigIntStack()
 		{
-			_stream = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+			_stream = new FileStream(_tempFileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 			_index = new LinkedStack<long>();
 		}
 
-		public int Count { get { return _index.Count; } }
+		public long Count { get { return _index.Count; } }
 
 		public void Push(BigInteger item)
 		{
@@ -49,6 +50,27 @@ namespace Ackermann
 
 			_stream.SetLength(pos);
 			return new BigInteger(buffer);
+		}
+
+		protected void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (_stream != null)
+				{
+					_stream.Close();
+					_stream.Dispose();
+					if (File.Exists(_tempFileName))
+						File.Delete(_tempFileName);
+				}
+
+				GC.SuppressFinalize(this);
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
 		}
 	}
 }
